@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizador de Imagens - Google Sheets</title>
+    <style>
+	 html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+  }
+
+  .main-container {
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+  }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            backdrop-filter: blur(10px);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 10px,
+                rgba(255, 255, 255, 0.1) 10px,
+                rgba(255, 255, 255, 0.1) 20px
+            );
+            animation: move 20s linear infinite;
+        }
+
+        @keyframes move {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        .header h1 {
+            font-size: 2.8em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            position: relative;
+            z-index: 1;
+        }
+
+        .header p {
+            font-size: 1.3em;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .loading-container {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 6px solid #f3f3f3;
+            border-top: 6px solid #4facfe;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        .loading-text {
+            font-size: 1.2em;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .loading-progress {
+            width: 100%;
+            height: 4px;
+            background: #f0f0f0;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+
+        .loading-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #4facfe, #00f2fe);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 2px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #4facfe;
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-number {
+            font-size: 2.8em;
+            font-weight: bold;
+            color: #4facfe;
+            margin-bottom: 8px;
+            text-shadow: 2px 2px 4px rgba(79, 172, 254, 0.2);
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 1em;
+            font-weight: 500;
+        }
+
+        /* Controles de filtro */
+        .filter-controls {
+            background: white;
+            padding: 25px;
+            border-radius: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .filter-button {
+            padding: 12px 25px;
+            border: 2px solid #4facfe;
+            background: white;
+            color: #4facfe;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            font-size: 0.95em;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .filter-button:hover {
+            background: #4facfe;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(79, 172, 254, 0.3);
+        }
+
+        .filter-button.active {
+            background: #4facfe;
+            color: white;
+            box-shadow: 0 8px 20px rgba(79, 172, 254, 0.3);
+        }
+
+        .filter-button .count {
+            background: rgba(255, 255, 255, 0.3);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            margin-left: 8px;
+        }
+
+        .filter-button:hover .count,
+        .filter-button.active .count {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        .category-section {
+            margin-bottom: 50px;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            border-left: 6px solid #4facfe;
+            transition: all 0.3s ease;
+        }
+
+        .category-section:hover {
+            transform: translateY(-2px);
+        }
+
+        .category-section.filtered {
+            display: none;
+        }
+
+        .category-title {
+            font-size: 2em;
+            color: #333;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .category-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .images-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 25px;
+        }
+
+        .image-item {
+            position: relative;
+            background: white;
+            border-radius: 18px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: all 0.4s ease;
+            cursor: pointer;
+            border: 3px solid transparent;
+        }
+
+        .image-item:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+            border-color: #4facfe;
+        }
+
+        .image-item img {
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+            transition: transform 0.4s ease;
+        }
+
+        .image-item:hover img {
+            transform: scale(1.1);
+        }
+
+        .image-info {
+            padding: 20px;
+            text-align: center;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        }
+
+        .image-info h3 {
+            color: #333;
+            font-size: 1.2em;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .image-info p {
+            color: #666;
+            font-size: 0.95em;
+        }
+
+        /* Modal para zoom */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.95);
+            animation: fadeIn 0.4s ease;
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            max-width: 90%;
+            max-height: 90%;
+            animation: zoomIn 0.4s ease;
+        }
+
+        .modal-content img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 15px;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .close {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            color: #fff;
+            font-size: 50px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            z-index: 1001;
+        }
+
+        .close:hover {
+            color: #4facfe;
+            transform: scale(1.2) rotate(90deg);
+        }
+
+        .modal-info {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 30px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .error-message {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            margin: 30px 0;
+            box-shadow: 0 15px 35px rgba(255, 107, 107, 0.3);
+        }
+
+        .error-message h3 {
+            font-size: 1.5em;
+            margin-bottom: 15px;
+        }
+
+        .retry-button {
+            background: white;
+            color: #ff6b6b;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .retry-button:hover {
+            background: #f8f9fa;
+            transform: translateY(-2px);
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes zoomIn {
+            from { transform: translate(-50%, -50%) scale(0.3); }
+            to { transform: translate(-50%, -50%) scale(1); }
+        }
+
+        @media (max-width: 768px) {
+            .images-grid {
+                grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+                gap: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2.2em;
+            }
+            
+            .content {
+                padding: 25px;
+            }
+            
+            .category-section {
+                padding: 20px;
+            }
+
+            .filter-controls {
+                padding: 20px;
+            }
+
+            .filter-button {
+                padding: 10px 20px;
+                font-size: 0.9em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <div class="header">
+            <h1>🎨 Galeria de Imagens</h1>
+            <p>Carregando imagens da planilha Google Sheets...</p>
+        </div>
+
+        <div class="content">
+            <div id="loading" class="loading-container">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">Carregando dados da planilha...</div>
+                <div class="loading-progress">
+                    <div class="loading-progress-bar" id="progressBar"></div>
+                </div>
+            </div>
+
+            <div id="stats" class="stats" style="display: none;">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalImages">0</div>
+                    <div class="stat-label">Total de Imagens</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="totalCategories">0</div>
+                    <div class="stat-label">Categorias com Imagens</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="loadTime">0</div>
+                    <div class="stat-label">Tempo de Carregamento (s)</div>
+                </div>
+            </div>
+
+            <!-- Controles de filtro -->
+            <div id="filterControls" class="filter-controls" style="display: none;">
+                <button class="filter-button active" data-category="all">
+                    🎯 Todas as Categorias
+                    <span class="count" id="allCount">0</span>
+                </button>
+            </div>
+
+            <div id="gallery" class="gallery-container"></div>
+        </div>
+    </div>
+
+    <!-- Modal para zoom -->
+    <div id="imageModal" class="modal">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <div class="modal-content">
+            <img id="modalImage" src="" alt="">
+            <div class="modal-info">
+                <h3 id="modalTitle"></h3>
+                <p id="modalDescription"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configurações
+        const SPREADSHEET_ID = '1R4SzAT-HAY9vUMGLH_Uu-w26w7L23bfdmdzHJGIIZ7I';
+        const CSV_URLS = [
+            `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=0`,
+            `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv`,
+            `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=Sheet1`,
+        ];
+
+        let startTime = Date.now();
+        let totalImages = 0;
+        let totalCategories = 0;
+        let categories = [];
+        let currentFilter = 'all';
+
+        // Função para verificar se uma URL é de imagem
+        function isImageUrl(url) {
+            if (!url || typeof url !== 'string') return false;
+            
+            const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'];
+            const lowerUrl = url.toLowerCase();
+            
+            return imageExtensions.some(ext => lowerUrl.includes(`.${ext}`)) ||
+                   lowerUrl.includes('drive.google.com') ||
+                   lowerUrl.includes('imgur.com') ||
+                   lowerUrl.includes('googleusercontent.com') ||
+                   lowerUrl.includes('arte');
+        }
+
+        // Função para converter URL do Google Drive
+        function convertGoogleDriveUrl(url) {
+            if (url.includes('drive.google.com')) {
+                const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+                if (match) {
+                    return `https://drive.google.com/uc?id=${match[1]}`;
+                }
+            }
+            return url;
+        }
+
+        // Função para parsear CSV
+        function parseCSV(csvText) {
+            const lines = csvText.split('\n');
+            const result = [];
+            
+            for (let line of lines) {
+                if (line.trim() !== '') {
+                    // Parse CSV básico - pode ser melhorado para casos mais complexos
+                    const row = line.split(',').map(cell => cell.replace(/^"(.*)"$/, '$1').trim());
+                    result.push(row);
+                }
+            }
+            
+            return result;
+        }
+
+        // Função para carregar dados da planilha
+        async function loadSpreadsheetData() {
+            updateProgress(10, 'Conectando com o Google Sheets...');
+            
+            for (let i = 0; i < CSV_URLS.length; i++) {
+                try {
+                    updateProgress(20 + (i * 20), `Tentativa ${i + 1}/${CSV_URLS.length}...`);
+                    
+                    const response = await fetch(CSV_URLS[i], {
+                        method: 'GET',
+                        headers: {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                        }
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const csvText = await response.text();
+                    
+                    if (csvText && csvText.trim() !== '') {
+                        updateProgress(80, 'Processando dados...');
+                        const data = parseCSV(csvText);
+                        
+                        if (data.length > 0) {
+                            updateProgress(100, 'Dados carregados com sucesso!');
+                            return data;
+                        }
+                    }
+                } catch (error) {
+                    console.warn(`Erro na tentativa ${i + 1}:`, error);
+                }
+            }
+            
+            throw new Error('Não foi possível carregar os dados da planilha');
+        }
+
+        // Função para atualizar progresso
+        function updateProgress(percent, message) {
+            const progressBar = document.getElementById('progressBar');
+            const loadingText = document.querySelector('.loading-text');
+            
+            if (progressBar) progressBar.style.width = `${percent}%`;
+            if (loadingText) loadingText.textContent = message;
+        }
+
+        // Função para criar botões de filtro
+        function createFilterButtons() {
+            const filterControls = document.getElementById('filterControls');
+            const existingButtons = filterControls.querySelectorAll('.filter-button:not([data-category="all"])');
+            
+            // Remove botões existentes (exceto "Todas as Categorias")
+            existingButtons.forEach(btn => btn.remove());
+            
+            // Adiciona botões para cada categoria
+            categories.forEach(category => {
+                const button = document.createElement('button');
+                button.className = 'filter-button';
+                button.setAttribute('data-category', category.name);
+                button.innerHTML = `
+                    ${category.icon} ${category.name}
+                    <span class="count">${category.count}</span>
+                `;
+                button.addEventListener('click', () => filterByCategory(category.name));
+                filterControls.appendChild(button);
+            });
+            
+            // Atualiza contador do botão "Todas as Categorias"
+            document.getElementById('allCount').textContent = totalImages;
+            
+            filterControls.style.display = 'flex';
+        }
+
+        // Função para filtrar por categoria
+        function filterByCategory(categoryName) {
+            currentFilter = categoryName;
+            
+            // Atualiza botões ativos
+            const buttons = document.querySelectorAll('.filter-button');
+            buttons.forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.getAttribute('data-category') === categoryName) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            // Filtra seções
+            const sections = document.querySelectorAll('.category-section');
+            sections.forEach(section => {
+                const sectionCategory = section.getAttribute('data-category');
+                if (categoryName === 'all' || sectionCategory === categoryName) {
+                    section.style.display = 'block';
+                    section.classList.remove('filtered');
+                } else {
+                    section.style.display = 'none';
+                    section.classList.add('filtered');
+                }
+            });
+        }
+
+        // Função para renderizar galeria
+        function renderGallery(data) {
+            const gallery = document.getElementById('gallery');
+            const headers = data[0];
+            totalCategories = 0;
+            totalImages = 0;
+            categories = [];
+            
+            gallery.innerHTML = '';
+            
+            // Processar cada categoria
+            for (let col = 0; col < headers.length; col++) {
+                const category = headers[col];
+                
+                if (!category || category.trim() === '') continue;
+                
+                // Coletar imagens da categoria
+                const images = [];
+                
+                for (let row = 1; row < data.length; row++) {
+                    const cell = data[row][col];
+                    
+                    if (cell && isImageUrl(cell)) {
+                        images.push({
+                            url: convertGoogleDriveUrl(cell),
+                            row: row + 1
+                        });
+                    }
+                }
+                
+                if (images.length > 0) {
+                    totalCategories++;
+                    totalImages += images.length;
+                    
+                    // Adiciona categoria à lista
+                    categories.push({
+                        name: category,
+                        count: images.length,
+                        icon: category.charAt(0).toUpperCase()
+                    });
+                    
+                    const categorySection = document.createElement('div');
+                    categorySection.className = 'category-section';
+                    categorySection.setAttribute('data-category', category);
+                    categorySection.innerHTML = `
+                        <h2 class="category-title">
+                            <div class="category-icon">${category.charAt(0).toUpperCase()}</div>
+                            ${category}
+                            <span style="color: #4facfe; font-size: 0.6em; margin-left: auto;">(${images.length} imagens)</span>
+                        </h2>
+                        <div class="images-grid">
+                            ${images.map(image => `
+                                <div class="image-item" onclick="openModal('${image.url}', '${category}', ${image.row}); filterByCategory('${category}');">
+                                    <img src="${image.url}" alt="${category}" loading="lazy" onerror="handleImageError(this)">
+                                    <div class="image-info">
+                                        <h3>${category}</h3>
+                                        <p>Linha ${image.row}</p>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                    
+                    gallery.appendChild(categorySection);
+                }
+            }
+            
+            // Atualizar estatísticas
+            updateStats();
+            
+            // Criar botões de filtro
+            createFilterButtons();
+        }
+
+        // Função para atualizar estatísticas
+        function updateStats() {
+            const loadTime = ((Date.now() - startTime) / 1000).toFixed(1);
+            
+            document.getElementById('totalImages').textContent = totalImages;
+            document.getElementById('totalCategories').textContent = totalCategories;
+            document.getElementById('loadTime').textContent = loadTime;
+            
+            document.getElementById('stats').style.display = 'grid';
+        }
+
+        // Função para lidar com erros de imagem
+        function handleImageError(img) {
+            const container = img.closest('.image-item');
+            container.innerHTML = `
+                <div style="padding: 40px; text-align: center; color: #999; background: #f8f9fa; border-radius: 15px; height: 220px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+                    <div style="font-size: 2em; margin-bottom: 10px;">❌</div>
+                    <strong>Imagem não disponível</strong>
+                    <small style="margin-top: 5px; display: block;">Verifique se a URL está correta</small>
+                </div>
+            `;
+        }
+
+        // Função para abrir modal
+        function openModal(imageUrl, category, row) {
+            const modal = document.getElementById('imageModal');
+            const modalImage = document.getElementById('modalImage');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalDescription = document.getElementById('modalDescription');
+            
+            modalImage.src = imageUrl;
+            modalTitle.textContent = category;
+            modalDescription.textContent = `Linha ${row} da planilha`;
+            
+            modal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Função para fechar modal
+        function closeModal() {
+            const modal = document.getElementById('imageModal');
+            modal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        // Função para mostrar erro
+        function showError(message) {
+            const gallery = document.getElementById('gallery');
+            gallery.innerHTML = `
+                <div class="error-message">
+                    <h3>❌ Erro ao carregar a planilha</h3>
+                    <p>${message}</p>
+                    <p>Possíveis soluções:</p>
+                    <ul style="text-align: left; margin: 15px 0; padding-left: 20px;">
+                        <li>Verifique se a planilha está pública</li>
+                        <li>Confirme se o ID da planilha está correto</li>
+                        <li>Tente novamente em alguns minutos</li>
+                    </ul>
+                    <button class="retry-button" onclick="location.reload()">🔄 Tentar novamente</button>
+                </div>
+            `;
+        }
+
+        // Eventos
+        window.onclick = function(event) {
+            const modal = document.getElementById('imageModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeModal();
+            }
+        });
+
+        // Adicionar evento para filtrar por "Todas as Categorias"
+        document.addEventListener('DOMContentLoaded', function() {
+            const allCategoriesBtn = document.querySelector('[data-category="all"]');
+            if (allCategoriesBtn) {
+                allCategoriesBtn.addEventListener('click', () => filterByCategory('all'));
+            }
+        });
+
+        // Inicializar aplicação
+        window.addEventListener('load', async function() {
+            try {
+                const data = await loadSpreadsheetData();
+                
+                setTimeout(() => {
+                    document.getElementById('loading').style.display = 'none';
+                    renderGallery(data);
+                }, 500);
+                
+            } catch (error) {
+                console.error('Erro:', error);
+                document.getElementById('loading').style.display = 'none';
+                showError(error.message);
+            }
+        });
+    </script>
+</body>
+</html>
