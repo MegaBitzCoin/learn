@@ -718,7 +718,7 @@
                                     <img src="${image.url}" alt="${category}" loading="lazy" onerror="handleImageError(this)">
                                     <div class="image-info">
                                         <h3>${category}</h3>
-                                        <p>Linha ${image.row}</p>
+                                        <p> ${image.row}</p>
                                     </div>
                                 </div>
                             `).join('')}
@@ -768,7 +768,7 @@
             
             modalImage.src = imageUrl;
             modalTitle.textContent = category;
-            modalDescription.textContent = `Linha ${row} da planilha`;
+            modalDescription.textContent = ` ${row}`;
             
             modal.style.display = 'block';
             document.body.style.overflow = 'hidden';
